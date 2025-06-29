@@ -1,0 +1,46 @@
+from flask import Flask, request
+from twilio.twiml.messaging_response import MessagingResponse
+import openai
+import os
+
+app = Flask(__name__)
+
+# API Key de OpenAI desde variable de entorno
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def consulta_chatgpt(pregunta):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "Eres un experto en apuestas deportivas. Da predicciones actuales."},
+            {"role": "user", "content": pregunta}
+        ]
+    )
+    return response.choices[0].message.content.strip()
+
+@app.route("/bot", methods=["POST"])
+def bot():
+    msg = request.values.get('Body', '').lower()
+    resp = MessagingResponse()
+    mensaje = resp.message()
+
+    if 'apuesta' in msg:
+        respuesta = consulta_chatgpt("Dame un pronóstico de apuesta deportiva para hoy.")
+        mensaje.body(respuesta)
+    else:
+        mensaje.body("Escribe 'apuesta' para una predicción inteligente.")
+    
+    return str(resp)
+
+if __name__ == "__main__":
+    app.run()
+flask
+openai
+twilio
+services:
+  - type: web
+    name: bot-apuestas
+    env: python
+    buildCommand: ""
+    startCommand: gunicorn app:app
+web: gunicorn app:app
